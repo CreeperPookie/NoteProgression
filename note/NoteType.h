@@ -1,0 +1,43 @@
+#pragma once
+
+#include <string>
+#include <algorithm>
+
+class NoteType
+{
+public:
+	enum Notes
+	{
+		_ = -1, // used for invalid checking
+		C,
+		C_SHARP,
+		D,
+		D_SHARP,
+		E,
+		F,
+		F_SHARP,
+		G,
+		G_SHARP,
+		A,
+		A_SHARP,
+		B,
+		MAX = B
+	};
+	explicit NoteType(std::string note);
+	explicit NoteType(int key);
+	static int getMaxOrdinal();
+	[[nodiscard]] int getOrdinal() const;
+	[[nodiscard]] std::string getName() const;
+	[[nodiscard]] Notes getNote() const;
+	void decreaseNote();
+	void increaseNote();
+	//bool operator<(NoteType note_type);
+	//bool operator>(NoteType note_type);
+	std::strong_ordering operator<=>(NoteType note_type) const;
+	bool operator==(NoteType note_type) const;
+	bool operator==(Notes note_type) const;
+	[[nodiscard]] int compare(NoteType note) const;
+
+private:
+	Notes note;
+};
