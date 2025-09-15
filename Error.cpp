@@ -27,6 +27,7 @@ std::string Error::get_error_message() const
 		case LENGTH_TOO_LOW: return "The provided length argument cannot be less than 1!";
 		case MISSING_NOTE_MODE: return "The provided note mode argument wasn't specified!";
 		case INVALID_NOTE_MODE: return "The provided note mode argument is not a valid note mode!";
+		case NOTE_MODE_NOT_QUADRATIC: return "The provided note mode is not quadratic!";
 		case MISSING_FADE_START: return "The provided fade start argument wasn't specified!";
 		case INVALID_FADE_START: return "The provided fade start argument is not a valid number!";
 		case FADE_START_OUT_OF_RANGE: return "The provided fade start argument is out of range!";
@@ -35,6 +36,7 @@ std::string Error::get_error_message() const
 		case FADE_END_OUT_OF_RANGE: return "The provided fade end argument is out of range!";
 		case MISSING_FADE_MODE: return "The provided fade mode argument wasn't specified!";
 		case INVALID_FADE_MODE: return "The provided fade mode argument is not a valid fade mode!";
+		case FADE_MODE_NOT_QUADRATIC: return "The provided fade mode is not quadratic!";
 		case MISSING_INSTRUMENT: return "The provided instrument argument wasn't specified!";
 		case INVALID_INSTRUMENT: return "The provided instrument argument is not a valid Minecraft note block instrument!";
 		case MISSING_PANNING_MODE: return "The provided panning mode argument wasn't specified!";
@@ -60,6 +62,7 @@ Error Error::get_error_by_name(std::string name)
 	else if (name == "LENGTH_TOO_LOW") return LENGTH_TOO_LOW;
 	else if (name == "MISSING_NOTE_MODE") return MISSING_NOTE_MODE;
 	else if (name == "INVALID_NOTE_MODE") return INVALID_NOTE_MODE;
+	else if (name == "NOTE_MODE_NOT_QUADRATIC") return NOTE_MODE_NOT_QUADRATIC;
 	else if (name == "MISSING_FADE_START") return MISSING_FADE_START;
 	else if (name == "INVALID_FADE_START") return INVALID_FADE_START;
 	else if (name == "FADE_START_OUT_OF_RANGE") return FADE_START_OUT_OF_RANGE;
@@ -68,6 +71,7 @@ Error Error::get_error_by_name(std::string name)
 	else if (name == "FADE_END_OUT_OF_RANGE") return FADE_END_OUT_OF_RANGE;
 	else if (name == "MISSING_FADE_MODE") return MISSING_FADE_MODE;
 	else if (name == "INVALID_FADE_MODE") return INVALID_FADE_MODE;
+	else if (name == "FADE_MODE_NOT_QUADRATIC") return FADE_MODE_NOT_QUADRATIC;
 	else if (name == "MISSING_INSTRUMENT") return MISSING_INSTRUMENT;
 	else if (name == "INVALID_INSTRUMENT") return INVALID_INSTRUMENT;
 	else if (name == "MISSING_PANNING_MODE") return MISSING_PANNING_MODE;
@@ -79,11 +83,12 @@ Error Error::get_error_by_name(std::string name)
 	else throw std::invalid_argument("The inputted Error type " + name + " does not correspond to a valid Error");
 }
 
-int Error::print_error(const Error error)
+int Error::print_error(const Error error, const std::initializer_list<std::string_view> extra = {})
 {
 	if (error == SUCCESS) return 0;
 	cerr << "Invalid arguments!" << endl;
 	cerr << error.get_error_message() << endl;
+	for (const auto& extra_error : extra) cerr << extra_error << endl;
 	return error.get_error_code();
 }
 

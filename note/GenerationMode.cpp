@@ -12,7 +12,7 @@ GenerationMode GenerationMode::get_generation_mode(std::string name)
 {
     std::ranges::transform(name, name.begin(), toupper);
 	if (name == "LINEAR") return LINEAR;
-	else if (name == "EXPONENTIAL") return EXPONENTIAL;
+	else if (name == "QUADRATIC") return QUADRATIC;
 	else throw std::invalid_argument("The inputted mode \"" + name + "\" does not correspond to any valid fade mode");
 }
 

@@ -4,6 +4,8 @@
 
 #include "Utility.h"
 
+#include <sstream>
+
 vector<int> Utility::get_factors(const int number)
 {
 	vector<int> factors;
@@ -28,4 +30,39 @@ int Utility::get_gcd(const int a, const int b)
 {
 	if (b == 0) return a;
 	return get_gcd(b, a % b);
+}
+
+int Utility::square(const int x)
+{
+	return x * x;
+}
+
+double Utility::square(double x)
+{
+	return x * x;
+}
+
+void Utility::replaceAll(std::string& string, const std::string& str, const std::string& replacement)
+{
+	if (string.empty()) return;
+	while (string.find(str) != std::string::npos)
+	{
+		const size_t pos = string.find(str);
+		string.replace(pos, str.size(), replacement);
+	}
+}
+
+std::vector<std::string> Utility::split(const std::string& string, const std::string& delimiter)
+{
+	std::vector<std::string> tokens;
+	if (string.empty()) return tokens;
+	size_t lastMatch = 0;
+	while (string.find(delimiter, lastMatch) != std::string::npos)
+	{
+		size_t match = string.find(delimiter, lastMatch);
+		tokens.push_back(string.substr(lastMatch, match - lastMatch));
+		lastMatch = match + delimiter.size();
+	}
+	tokens.push_back(string.substr(lastMatch));
+	return tokens;
 }

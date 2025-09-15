@@ -17,6 +17,7 @@ public:
 		LENGTH_TOO_LOW,
 		MISSING_NOTE_MODE,
 		INVALID_NOTE_MODE,
+		NOTE_MODE_NOT_QUADRATIC,
 		MISSING_FADE_START,
 		INVALID_FADE_START,
 		FADE_START_OUT_OF_RANGE,
@@ -25,6 +26,7 @@ public:
 		FADE_END_OUT_OF_RANGE,
 		MISSING_FADE_MODE,
 		INVALID_FADE_MODE,
+		FADE_MODE_NOT_QUADRATIC,
 		MISSING_INSTRUMENT,
 		INVALID_INSTRUMENT,
 		MISSING_PANNING_MODE,
@@ -41,7 +43,7 @@ public:
 	int get_error_code() const;
 	[[nodiscard]] std::string get_error_message() const;
 	static Error get_error_by_name(std::string name);
-	static int print_error(Error error);
+	static int print_error(Error error, std::initializer_list<std::string_view> extra);
 	static int print_error(ErrorType error_type);
 	bool operator==(Error other_error) const;
 	bool operator==(ErrorType other_error_type) const;

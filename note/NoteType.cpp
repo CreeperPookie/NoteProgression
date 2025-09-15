@@ -91,28 +91,28 @@ bool NoteType::operator==(const Notes note_type) const
 	return note_type == note;
 }
 
-int NoteType::compare(const NoteType note) const
+int NoteType::compare(const NoteType note_type) const
 {
 	int difference = 0;
-	if (*this == note) return difference;
-	else if (*this < note) // rising
+	if (*this == note_type) return difference;
+	else if (*this < note_type) // rising
 	{
 		NoteType temp = *this;
 		while (true)
 		{
 			temp.increaseNote();
 			difference++;
-			if (temp == note || temp == _) break;
+			if (temp == note_type || temp == _) break;
 		}
 	}
 	else
 	{
-		NoteType temp = note;
+		NoteType temp = note_type;
 		while (true)
 		{
 			temp.decreaseNote();
 			difference++;
-			if (temp == note || temp == MAX) break;
+			if (temp == note_type || temp == MAX) break;
 		}
 	}
 	return difference;

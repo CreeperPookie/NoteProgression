@@ -25,14 +25,13 @@ public:
 	};
 	explicit NoteType(std::string note);
 	explicit NoteType(int key);
+	NoteType(const Notes notes) : note(notes) {}
 	static int getMaxOrdinal();
 	[[nodiscard]] int getOrdinal() const;
 	[[nodiscard]] std::string getName() const;
 	[[nodiscard]] Notes getNote() const;
 	void decreaseNote();
 	void increaseNote();
-	//bool operator<(NoteType note_type);
-	//bool operator>(NoteType note_type);
 	std::strong_ordering operator<=>(NoteType note_type) const;
 	bool operator==(NoteType note_type) const;
 	bool operator==(Notes note_type) const;

@@ -8,7 +8,7 @@ public:
 	enum GenerationType
 	{
 		LINEAR,
-		EXPONENTIAL
+		QUADRATIC,
 	};
 	GenerationMode() = default;
 	constexpr GenerationMode(const GenerationType fade_type) : note_generation_type(fade_type) {}

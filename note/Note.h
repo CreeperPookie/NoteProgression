@@ -12,7 +12,7 @@ using std::endl;
 
 class Note
 {
-	NoteType note_type{ "C" };
+	NoteType note_type { "C" };
 	Instrument instrument = Instrument::PLING;
 	int octave;
 	int cents{ 0 };

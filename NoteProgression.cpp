@@ -4,7 +4,7 @@
 #include <windows.h>
 
 #include "Error.h"
-#include "util/Utility.h"
+#include "Utility.h"
 #include "util/BinaryFile.h"
 
 #include "note/Note.h"
@@ -21,6 +21,8 @@ int main(int argc, char* argv[])
 	bool nbs_export = false;
 	bool include_base_note = false;
 	bool include_end_note = false;
+	bool flip_note_quadratic_functions = false;
+	bool flip_fade_quadratic_functions = false;
 	int fade_start_percent = -1;
 	int fade_end_percent = -1;
 	Instrument instrument = Instrument::PLING;
@@ -135,6 +137,24 @@ int main(int argc, char* argv[])
 				return Error::print_error(Error::INVALID_PANNING_MODE);
 			}
 		}
+		if (is_argument(argument, { "flip-note-quadratic-functions", "reverse-note-quadratic-functions" }))
+		{
+			flip_note_quadratic_functions = true;
+			if (note_mode != GenerationMode::QUADRATIC)
+			{
+				if (!no_output_info) cout << "quadratic mode will be enabled as it's required for flipping functions!" << endl;
+				note_mode = GenerationMode::QUADRATIC;
+			}
+		}
+		if (is_argument(argument, { "flip-fade-quadratic-functions", "reverse-fade-quadratic-functions" }))
+		{
+			flip_fade_quadratic_functions = true;
+			if (fade_mode != GenerationMode::QUADRATIC)
+			{
+				if (!no_output_info) cout << "quadratic mode will be enabled as it's required for flipping functions!" << endl;
+				fade_mode = GenerationMode::QUADRATIC;
+			}
+		}
 		if (is_argument(argument, "nbs")) nbs_export = true;
 		if (is_argument(argument, { "include-start-note", "add-start-note" })) include_base_note = true;
 		if (is_argument(argument, { "include-end-note", "add-end-note" })) include_end_note = true;
@@ -158,6 +178,9 @@ int main(int argc, char* argv[])
 	if (length + (2 - offset) < 2) return Error::print_error(Error::MISSING_LENGTH);
 	else if ((fade_start_percent == -1) != (fade_end_percent == -1)) return Error::print_error(Error::MISSING_FADE_RANGE);// Check if only one fade percentage is specified
 	else if (!nbs_export && ((fade_start_percent != -1 || fade_end_percent != -1) || panning_mode != Panning::PAN_NONE)) return Error::print_error(Error::MISSING_NBS_EXPORT);
+	if (note_mode != GenerationMode::QUADRATIC && flip_note_quadratic_functions) return Error::print_error(Error::NOTE_MODE_NOT_QUADRATIC);
+	if (fade_mode != GenerationMode::QUADRATIC && flip_fade_quadratic_functions) return Error::print_error(Error::FADE_MODE_NOT_QUADRATIC);
+	if (note_mode != GenerationMode::RANDOM && random_pitches) return Error::print_error(Error::MISSING_RANDOM);
 	std::vector<Note> notes;
 	Note start_note_instance;
 	Note end_note_instance;
@@ -185,7 +208,6 @@ int main(int argc, char* argv[])
 			else current_note.increase_note();
 			if (current_note != end_note_instance) notes.push_back(current_note.clone());
 		}
-		//if (include_end_note) notes.push_back(end_note_instance);
 	}
 	else
 	{
@@ -201,15 +223,16 @@ int main(int argc, char* argv[])
 			cent_step = static_cast<int>(cent_step_exact < 0 ? ceil(cent_step_exact) : floor(cent_step_exact));
 		}
 		int cent_offset = 0;
-		//if (include_base_note) notes.push_back(current_note);
 		for (int i = include_base_note ? 1 : 0; i < totalLength; i++)
 		{
-			if (note_mode == GenerationMode::EXPONENTIAL)
+			if (note_mode == GenerationMode::QUADRATIC)
 			{
 				// https://www.desmos.com/calculator/9jv1asddng
 				double target_semitone;
-				if (start_semitones < 0) target_semitone = ((end_note_instance.get_id() - start_note_instance.get_id()) / pow(static_cast<double>(length - (include_base_note ? 1 : 0)), static_cast<double>(2)) * pow(static_cast<double>(include_base_note ? i - 1 : i), static_cast<double>(2)) + start_note_instance.get_id());
-				else target_semitone = ((-(end_note_instance.get_id() - start_note_instance.get_id())) / pow(static_cast<double>(length - (include_base_note ? 1 : 0)), static_cast<double>(2)) * pow(static_cast<double>(include_base_note ? i - 1 : i), static_cast<double>(2)) + end_note_instance.get_id());
+				double lengthSquareReciprocal = 1.0 / Utility::square(totalLength);
+				int note_distance = end_note_instance.get_id() - start_note_instance.get_id();
+				if (flip_note_quadratic_functions) target_semitone = (-note_distance * lengthSquareReciprocal * Utility::square(i - totalLength) + end_note_instance.get_id());
+				else target_semitone = (note_distance * lengthSquareReciprocal * Utility::square(i) + start_note_instance.get_id());
 				cent_step_exact = -round((((notes.empty() ? start_note_instance.get_id() : notes[notes.size() - 1].get_id()) * 100) + (notes.empty() ? start_note_instance : notes[notes.size() - 1]).get_cents() - (target_semitone * 100)));
 				cent_step = static_cast<int>(cent_step_exact < 0 ? ceil(cent_step_exact) : floor(cent_step_exact));
 			}
@@ -225,75 +248,6 @@ int main(int argc, char* argv[])
 			cent_offset = 0;
 			notes.push_back(current_note.clone());
 		}
-		/*int end_cents_offset = abs(end_note_instance.compare(current_note) * 100) + current_note.get_cents() * 2;
-		if (!no_output_info && debug) cout << "detected cent offset: " << end_cents_offset << endl;
-		if (end_cents_offset > 0)
-		{
-			int remaining_cents = end_cents_offset;
-			int adjusted_notes = 0;
-			if (int cents_gcf = Utility::get_gcf(remaining_cents); cents_gcf > 1 && cents_gcf < end_cents_offset)
-			{
-				int cents = end_cents_offset / cents_gcf;
-				if (!no_output_info && debug) cout << "distributing " << abs(cents) << " (out of " << remaining_cents << ") cents over " << length << " notes" << endl;
-				for (int i = 0; i < length - offset; i++)
-				{
-					if (adjusted_notes >= cents) break;
-					if (i % (cents_gcf - 1) == 0)
-					{
-						notes[i].offset_cents(cent_step_exact < 1 ? -1 : 1);
-					}
-					adjusted_notes++;
-				}
-				remaining_cents -= cents;
-			}
-			adjusted_notes = 0;
-			current_precision_loss = 0;
-			for (int i = 0; i < length - offset; i++)
-			{
-				current_precision_loss += (remaining_cents / static_cast<double>(length - offset));
-				if (adjusted_notes >= remaining_cents) break;
-				if (current_precision_loss > 1)
-				{
-					current_precision_loss -= floor(current_precision_loss);
-					notes[i].offset_cents(cent_step_exact < 1 ? -1 : 1);
-				}
-				adjusted_notes++;
-			}
-		}
-		if (double offset_remainder = end_cents_offset / static_cast<double>(length - offset - (include_base_note ? 1 : 0)); floor(offset_remainder) == offset_remainder)
-		{
-			if (!no_output_info && debug) cout << "distributing " << abs(end_cents_offset) << " cents over " << length << " notes" << endl;
-			for (int percent = 1; percent <= end_cents_offset; percent++)
-			{
-				notes[static_cast<int>((percent / static_cast<double>(abs(end_cents_offset))) * length)].offset_cents(cent_step_exact < 1 ? 1 : -1);
-			}
-		}
-		else
-		{
-			int lower_common_factor = abs(end_cents_offset);
-			while (lower_common_factor > 1)
-			{
-				if (double remainder = length / static_cast<double>(lower_common_factor); floor(remainder) == remainder) break;
-				lower_common_factor--;
-			}
-			if (!no_output_info && debug) cout << "calculated lower factor " << lower_common_factor << endl;
-			int higher_common_factor = abs(end_cents_offset);
-			while (higher_common_factor < abs(end_cents_offset) + 100)
-			{
-				if (double remainder = static_cast<double>(higher_common_factor) / length; floor(remainder) == remainder) break;
-				higher_common_factor++;
-			}
-			if (!no_output_info && debug) cout << " and upper factor " << higher_common_factor << endl;
-			if (lower_common_factor > 1 && higher_common_factor < abs(end_cents_offset) + 100)
-			{
-				int best_factor = abs(end_cents_offset) - lower_common_factor < higher_common_factor - abs(end_cents_offset) ? lower_common_factor : higher_common_factor;
-				if (!no_output_info && debug) cout << "calculated the best factor as " << best_factor << " from lower " << lower_common_factor << " and upper " << higher_common_factor << endl;
-				for (int i = (include_base_note ? 1 : 0); i < length - offset; i++)
-				{
-					notes[i].offset_cents((cent_step_exact < 0 ? -1 : 1) * (length / best_factor));
-				}
-			}
-		}*/
 		if (include_end_note) notes.push_back(end_note_instance);
 	}
 	if (!nbs_export) print_output(notes, no_output_info);
@@ -406,7 +360,7 @@ int main(int argc, char* argv[])
 						velocity = static_cast<byte>(round((-index / static_cast<double>(length)) * (fade_start_percent - fade_end_percent) + fade_start_percent));
 						break;
 					}
-					case GenerationMode::EXPONENTIAL:
+					case GenerationMode::QUADRATIC:
 					{
 						if (fade_end_percent >= fade_start_percent) velocity = static_cast<byte>(round(((fade_end_percent - fade_start_percent) / pow(length, 2)) * pow(index, 2) + fade_start_percent));
 						else velocity = static_cast<byte>(round((((fade_start_percent - fade_end_percent)) / pow(length, 2)) * pow((index - length), 2) + fade_end_percent));
@@ -477,7 +431,7 @@ bool is_argument(const string& argument, const string& base_value)
 }
 
 // New: supports brace-lists like {"a","b"} directly
-bool is_argument(string argument, std::initializer_list<std::string_view> base_values)
+bool is_argument(string argument, const std::initializer_list<std::string_view> base_values)
 {
 	std::string_view prefixes[] = { "-", "--", "/" };
 	int prefix_index = -1;
@@ -545,7 +499,6 @@ bool is_argument(string argument, const char* const (&base_values)[N])
 
 void print_help()
 {
-	// cout << "Usage: <Start Note> <End Note> <Length>" << endl;
 	cout << "Notes are standard musical notes followed by a number for their respective octave (i.e. F#4) with an optionally specified cent value preceding it (i.e: C4+32c)" << endl;
 	cout << "Usage:" << endl;
 	cout << "-debug: enables debug mode, which outputs additional information about the generated progression" << endl;
@@ -558,6 +511,12 @@ void print_help()
 	cout << "-include-end-note: includes the last note in the generated progression;" << endl;
 	cout << "\tlike with -include-base-note, this will also cause the progression to generate one less note (as the inputted last note will become the outputted last note)" << endl;
 	cout << "\t-include-base-note and -include-end-note can be used together!" << endl << endl;
+	cout << "-note-mode: allows you to change the note generation mode;" << endl;
+	cout << "\tlinear: a generation type that changes the note key consistently over time; for example, for a full C scale: C, C#, D, D#, E, ..." << endl;
+	cout << "\tquadratic: a generation type that changes the note key increasingly over time; for example, for the same scale: C, E-3c, F#-35c, G4+14, ... C-40c, C-10c, C+1" << endl;
+	cout << "\t\tas you can see, the per-note jumps start off extremely rapid, but significantly slow down toward the end;" << endl;
+	cout << "\t\t-flip_note_quadratic_functions: reverses the functions used for quadratic note generation;" << endl;
+	cout << "\t\tthis can be useful for making the outputted note progression have a different feel, such as *starting* with a large drop-off instead of slowly changing to it" << endl;
 	cout << "NBS options:" << endl;
 	cout << "-nbs: enables exporting as a Note Block Studio song (.nbs) instead of as text;" << endl;
 	cout << "\t-nbs also enables other arguments for exporting:" << endl;
@@ -567,10 +526,12 @@ void print_help()
 	cout << "-fade-start: specifies the minimum velocity the fade should start from; cannot be lower than 1 or greater than 100!" << endl;
 	cout << "-fade-end: specifies the maximum velocity the fade should end on; cannot be less than one, less than the fade start percent, or greater than 100!" << endl;
 	cout << "If outputting with a fade, *both* -fade-start and -fade-end must be specified!" << endl;
-	cout << "-fade-mode: specifies the type of fade to output as;" << endl;
+	cout << "-fade-mode: specifies the type of fade to output as; this works in the same way as for the note generation mode, but for note velocity:" << endl;
 	cout << "\tlinear: a type of fade that changes the velocity consistently; for example for 4 notes: 25%, 50%, 75%, 100%" << endl;
-	cout << "\texponential: a type of fade that changes the velocity increasingly over time; for example for 4 notes: 12%, 25%, 50%, 100%" << endl;
+	cout << "\tquadratic: a type of fade that changes the velocity increasingly over time; for example for 4 notes: 12%, 25%, 50%, 100%" << endl;
 	cout << "\t\tcan be more effective for rapid build ups!" << endl;
+	cout << "\t\t-flip_fade_quadratic_functions: reverses the functions used for quadratic fade generation;" << endl;
+	cout << "\t\tthis has exactly the same effect as -flip_note_quadratic_functions, except for velocity generation instead" << endl;
 	cout << "Panning options:" << endl;
 	cout << "-panning: specifies the type of panning to output as;" << endl;
 	cout << "\tleft_to_right: pans all the notes from the left channel to the right" << endl;

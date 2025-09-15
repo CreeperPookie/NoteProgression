@@ -22,7 +22,7 @@ Note::Note(string note, const Instrument instrument) : instrument(instrument)
 	string octave_string;
 	for (size_t index = base.size(); index < note.size(); index++)
 	{
-		if (char octave_char = note[index]; octave_char == '+' || octave_char == '-' || (octave_char >= '0' && octave_char <= '9')) octave_string += octave_char;
+		if (const char octave_char = note[index]; octave_char == '+' || octave_char == '-' || (octave_char >= '0' && octave_char <= '9')) octave_string += octave_char;
 		else break;
 	}
 	octave = std::stoi(octave_string, &convertedChars);
