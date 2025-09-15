@@ -256,16 +256,17 @@ int main(int argc, char* argv[])
 		std::filesystem::path user_home = string(getenv("USERPROFILE"));
 		std::filesystem::path full_path = user_home;
 		int count = 0;
+		if (!std::filesystem::exists(user_home / "Note Progressions")) std::filesystem::create_directory(full_path / "Note Progressions");
 		do
 		{
-			full_path = user_home.string().append("\\").append("note-progression-").append(std::to_string(count + 1)).append(".nbs");
+			full_path = user_home / "Note Progressions" / ("note-progression-" + std::to_string(count + 1) + ".nbs");
 			count++;
 		}
 		while (count < 10000 && exists(full_path));
 		if (count == 10000)
 		{
 			cerr << "Error: Unable to generate NBS file!" << endl;
-			cerr << "To export, please clear your user folder of \"note-progression-{index}.nbs\" files." << endl;
+			cerr << "To export, please clear your Note Progressions folder of \"note-progression-{index}.nbs\" files." << endl;
 			cerr << "Textual representation: " << endl << endl;
 			print_output(notes, no_output_info);
 			return 0;
