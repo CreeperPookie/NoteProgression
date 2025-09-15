@@ -35,6 +35,9 @@ public:
 		MISSING_FADE_RANGE,
 		INVALID_NOTES,
 		SAME_NOTES,
+		MISSING_RANDOM,
+		MISSING_RANDOM_PATTERN,
+		INVALID_RANDOM_PATTERN
 	};
 	Error() = default;
 	constexpr Error(const ErrorType error_type) : error(error_type) {}

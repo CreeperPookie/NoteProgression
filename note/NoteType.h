@@ -35,7 +35,8 @@ public:
 	std::strong_ordering operator<=>(NoteType note_type) const;
 	bool operator==(NoteType note_type) const;
 	bool operator==(Notes note_type) const;
-	[[nodiscard]] int compare(NoteType note) const;
+	[[nodiscard]] int compare(NoteType note_type) const;
+	static bool validate_note(const std::string& note);
 
 private:
 	Notes note;

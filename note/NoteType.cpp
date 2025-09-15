@@ -117,3 +117,8 @@ int NoteType::compare(const NoteType note_type) const
 	}
 	return difference;
 }
+
+bool NoteType::validate_note(const std::string& note)
+{
+	return note == "_" || note == "C" || note == "C#" || note == "D" || note == "D#" || note == "E" || note == "F" || note == "F#" || note == "G" || note == "G#" || note == "A" || note == "A#" || note == "B";
+}

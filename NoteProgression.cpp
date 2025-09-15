@@ -4,6 +4,7 @@
 #include <windows.h>
 
 #include "Error.h"
+#include "util/RandomPattern.h"
 #include "Utility.h"
 #include "util/BinaryFile.h"
 
@@ -18,6 +19,7 @@ int main(int argc, char* argv[])
 	int length = -1;
 	bool debug = false;
 	bool no_output_info = false;
+	bool random_pitches = false;
 	bool nbs_export = false;
 	bool include_base_note = false;
 	bool include_end_note = false;
@@ -25,6 +27,8 @@ int main(int argc, char* argv[])
 	bool flip_fade_quadratic_functions = false;
 	int fade_start_percent = -1;
 	int fade_end_percent = -1;
+	RandomPattern random_note_pattern;
+	Random random;
 	Instrument instrument = Instrument::PLING;
 	GenerationMode fade_mode = GenerationMode::LINEAR;
 	GenerationMode note_mode = GenerationMode::LINEAR;
@@ -66,6 +70,21 @@ int main(int argc, char* argv[])
 			}
 			if (converted_chars != strlen(lengthArgument)) return Error::print_error(Error::INVALID_LENGTH);
 			else if (length < 1) return Error::print_error(Error::LENGTH_TOO_LOW);
+		}
+		if (is_argument(argument, "random-pitch")) random_pitches = true;
+		if (is_argument(argument, {"only-major", "random-only-major"})) random_note_pattern = "C,D,E,F,G,A,B";
+		if (is_argument(argument, {"only-minor", "random-only-minor"})) random_note_pattern = "C#,D#,F#,G#,A#";
+		if (is_argument(argument, {"random-pattern", "random-note-pattern"}))
+		{
+			if (argc == index + 1) return Error::print_error(Error::MISSING_RANDOM_PATTERN);
+			try
+			{
+				random_note_pattern = RandomPattern(argv[++index]);
+			}
+			catch (std::invalid_argument &e)
+			{
+				return Error::print_error(Error::INVALID_RANDOM_PATTERN);
+			}
 		}
 		if (is_argument(argument, {"mode", "note-mode"}))
 		{
@@ -199,7 +218,14 @@ int main(int argc, char* argv[])
 	if (start_note_instance == end_note_instance) return Error::print_error(Error::SAME_NOTES);
 	Note current_note = start_note_instance.clone();
 	current_note.set_instrument(instrument);
-	if (include_base_note) notes.push_back(current_note);
+	if (note_mode == GenerationMode::RANDOM)
+	{
+		for (int i = 0; i < length - offset; i++)
+		{
+			notes.push_back(generate_random_note(random, start_note_instance, end_note_instance, instrument, random_pitches, random_note_pattern));
+		}
+	}
+	else if (include_base_note) notes.push_back(current_note);
 	if (note_mode == GenerationMode::LINEAR && abs(start_semitones) == length - offset)
 	{
 		for (int i = 0; i < length - offset; i++)
@@ -209,7 +235,7 @@ int main(int argc, char* argv[])
 			if (current_note != end_note_instance) notes.push_back(current_note.clone());
 		}
 	}
-	else
+	else if (note_mode != GenerationMode::RANDOM)
 	{
 		int totalLength = length;
 		if (include_end_note) totalLength--;
@@ -363,8 +389,16 @@ int main(int argc, char* argv[])
 					}
 					case GenerationMode::QUADRATIC:
 					{
-						if (fade_end_percent >= fade_start_percent) velocity = static_cast<byte>(round(((fade_end_percent - fade_start_percent) / pow(length, 2)) * pow(index, 2) + fade_start_percent));
-						else velocity = static_cast<byte>(round((((fade_start_percent - fade_end_percent)) / pow(length, 2)) * pow((index - length), 2) + fade_end_percent));
+						int totalLength = length - (include_end_note ? 1 : 0);
+						double lengthSquareReciprocal = 1.0 / Utility::square(totalLength);
+						int velocity_difference = fade_end_percent - fade_start_percent;
+						if (flip_fade_quadratic_functions) velocity = -velocity_difference * lengthSquareReciprocal * Utility::square(index - totalLength) + fade_end_percent;
+						else velocity = velocity_difference * lengthSquareReciprocal * Utility::square(index) + fade_start_percent;
+						break;
+					}
+					case GenerationMode::RANDOM:
+					{
+						velocity = random.get_random_int(fade_start_percent, fade_end_percent);
 						break;
 					}
 					default:
@@ -507,6 +541,8 @@ void print_help()
 	cout << "-start: the first note to start the progression from (required)" << endl;
 	cout << "-end: the last note to end the progression to (required)" << endl;
 	cout << "-length: the length of the progression notes (required)" << endl;
+	cout << "-random: generates notes randomly between the start and end note instead of as a progression" << endl;
+	cout << "\t-random-pitch: if generating notes randomly, the generated notes will also be given a random pitch within [-49, 50] cents" << endl;
 	cout << "-include-base-note: includes the first note in the generated progression;" << endl;
 	cout << "\tthis will also cause the progression to generate one less note (as the inputted first note will become the outputted first note)" << endl;
 	cout << "-include-end-note: includes the last note in the generated progression;" << endl;
@@ -549,4 +585,21 @@ void print_output(const std::vector<Note>& notes, bool no_output_info)
 		if (i < notes.size() - 1) cout << "; ";
 	}
 	cout << endl;
+}
+
+Note generate_random_note(Random &random, const Note start, const Note end, const Instrument instrument, const bool random_pitch, RandomPattern random_pattern)
+{
+	Note result;
+	if (start == end) result = end;
+	else
+	{
+		do
+		{
+			result = Note(random.get_random_int(end.get_id(), start.get_id()));
+		}
+		while (!random_pattern.is_allowed(result));
+	}
+	result.set_instrument(instrument);
+	if (random_pitch) result.set_cents(random.get_random_int(-49, 50));
+	return result;
 }

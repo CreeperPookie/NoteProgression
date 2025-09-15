@@ -31,7 +31,13 @@ add_executable(NoteProgression
         util/Utility.cpp
         util/Utility.h
         Error.h
-        Error.cpp)
+        Error.cpp
+        Random.cpp
+        Random.h
+        util/RandomPattern.cpp
+        util/RandomPattern.h
+        util/RandomPatternSegment.cpp
+        util/RandomPatternSegment.h)
 add_test(NAME NoteProgressionTester
         COMMAND NoteProgressionTester)
 set(passRegex "^Success" "^All tests passed")

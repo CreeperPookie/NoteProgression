@@ -45,6 +45,9 @@ std::string Error::get_error_message() const
 		case MISSING_FADE_RANGE: return "The provided fade range argument wasn't specified!";
 		case INVALID_NOTES: return "The provided notes are not valid musical notes!";
 		case SAME_NOTES: return "The provided start and end notes are the same!";
+		case MISSING_RANDOM: return "The note mode must be set to random for those arguments!";
+		case MISSING_RANDOM_PATTERN: return "The provided random pattern argument was not specified!";
+		case INVALID_RANDOM_PATTERN: return "The provided random pattern argument is not a valid note pattern!";
 		default: return "Unknown error!";
 	}
 }
@@ -80,6 +83,9 @@ Error Error::get_error_by_name(std::string name)
 	else if (name == "MISSING_FADE_RANGE") return MISSING_FADE_RANGE;
 	else if (name == "INVALID_NOTES") return INVALID_NOTES;
 	else if (name == "NOTES_SAME") return SAME_NOTES;
+	else if (name == "MISSING_RANDOM") return MISSING_RANDOM;
+	else if (name == "MISSING_RANDOM_PATTERN") return MISSING_RANDOM_PATTERN;
+	else if (name == "INVALID_RANDOM_PATTERN") return INVALID_RANDOM_PATTERN;
 	else throw std::invalid_argument("The inputted Error type " + name + " does not correspond to a valid Error");
 }
 
