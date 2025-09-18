@@ -17,6 +17,7 @@ int main(int argc, char* argv[])
 	string start_note;
 	string end_note;
 	int length = -1;
+	long delay = 5000;
 	bool debug = false;
 	bool no_output_info = false;
 	bool random_pitches = false;
@@ -25,6 +26,7 @@ int main(int argc, char* argv[])
 	bool include_end_note = false;
 	bool flip_note_quadratic_functions = false;
 	bool flip_fade_quadratic_functions = false;
+	int custom_instrument_index = -1;
 	int fade_start_percent = -1;
 	int fade_end_percent = -1;
 	RandomPattern random_note_pattern;
@@ -36,7 +38,22 @@ int main(int argc, char* argv[])
 	for (int index = 1; index < argc; index++)
 	{
 		string argument = argv[index];
-		if (is_argument(argument, "debug")) debug = true;
+		if (is_argument(argument, {"no-delay", "no-cooldown"}))
+		{
+			if (delay > 0) return Error::print_error(Error::INVALID_DELAY, "The completion delay cannot be set if the delay is disabled with -" + argument + "!");
+			else delay = 0;
+		}
+		else if (is_argument(argument, {"delay", "custom-delay"}))
+		{
+			if (delay == 0) return Error::print_error(Error::INVALID_DELAY, "The completion delay cannot be set as it was already disabled!");
+			else if (argc == index + 1) return Error::print_error(Error::MISSING_DELAY);
+			const char* delay_argument = argv[++index];
+			size_t converted_chars;
+			delay = std::stol(string(delay_argument), &converted_chars);
+			if (converted_chars != strlen(delay_argument)) return Error::print_error(Error::INVALID_DELAY);
+			if (delay < 0) return Error::print_error(Error::DELAY_OUT_OF_RANGE);
+		}
+		else if (is_argument(argument, "debug")) debug = true;
 		else if (is_argument(argument, {"no-info", "no-log-info", "no-output-info"})) no_output_info = true;
 		else if (is_argument(argument, "help"))
 		{
@@ -102,19 +119,19 @@ int main(int argc, char* argv[])
 		if (is_argument(argument, "fade-start"))
 		{
 			if (argc == index + 1) return Error::print_error(Error::MISSING_FADE_START);
-			const char* fadeStartArgument = argv[++index];
+			const char* fade_start_argument = argv[++index];
 			size_t converted_chars;
-			fade_start_percent = std::stoi(string(fadeStartArgument), &converted_chars);
-			if (converted_chars != strlen(fadeStartArgument)) return Error::print_error(Error::INVALID_FADE_START);
+			fade_start_percent = std::stoi(string(fade_start_argument), &converted_chars);
+			if (converted_chars != strlen(fade_start_argument)) return Error::print_error(Error::INVALID_FADE_START);
 			if (fade_start_percent < 1 || fade_start_percent > 100) return Error::print_error(Error::FADE_START_OUT_OF_RANGE);
 		}
 		if (is_argument(argument, "fade-end"))
 		{
 			if (argc == index + 1) return Error::print_error(Error::MISSING_FADE_END);
-			const char* fadeEndArgument = argv[++index];
+			const char* fade_end_argument = argv[++index];
 			size_t converted_chars;
-			fade_end_percent = std::stoi(string(fadeEndArgument), &converted_chars);
-			if (converted_chars != strlen(fadeEndArgument)) return Error::print_error(Error::INVALID_FADE_END);
+			fade_end_percent = std::stoi(string(fade_end_argument), &converted_chars);
+			if (converted_chars != strlen(fade_end_argument)) return Error::print_error(Error::INVALID_FADE_END);
 			if (fade_end_percent < 1 || fade_end_percent > 100) return Error::print_error(Error::FADE_END_OUT_OF_RANGE);
 		}
 		if (is_argument(argument, "fade-mode"))
@@ -137,11 +154,20 @@ int main(int argc, char* argv[])
 			try
 			{
 				instrument = Instrument::get_instrument(instrument_argument);
+				if (instrument == Instrument::CUSTOM && custom_instrument_index == -1) custom_instrument_index = 0;
 			}
 			catch (std::invalid_argument &e)
 			{
 				return Error::print_error(Error::INVALID_INSTRUMENT);
 			}
+		}
+		if (is_argument(argument, "custom-instrument-index"))
+		{
+			if (argc == index + 1) return Error::print_error(Error::MISSING_CUSTOM_INSTRUMENT);
+		    string instrument_index_string = argv[++index];
+		    size_t converted_chars;
+			custom_instrument_index = std::stoi(string(instrument_index_string), &converted_chars);
+			if (converted_chars != strlen(instrument_index_string.c_str()) || custom_instrument_index < 0 || custom_instrument_index > 255) return Error::print_error(Error::INVALID_CUSTOM_INSTRUMENT);
 		}
 		if (is_argument(argument, "panning"))
 		{
@@ -195,8 +221,10 @@ int main(int argc, char* argv[])
 	if (include_base_note) offset--;
 	if (include_end_note) offset--;
 	if (length + (2 - offset) < 2) return Error::print_error(Error::MISSING_LENGTH);
+	else if (instrument == Instrument::CUSTOM && custom_instrument_index == -1) return Error::print_error(Error::CUSTOM_INSTRUMENT_INDEX_REQUIRED); // with the 0 fallback, this really shouldn't happen
+	else if (custom_instrument_index >= 240) return Error::print_error(Error::CUSTOM_INSTRUMENT_OUT_OF_RANGE, "For NBS v5, this is 240 custom instruments! (indexes start at 0)");
 	else if ((fade_start_percent == -1) != (fade_end_percent == -1)) return Error::print_error(Error::MISSING_FADE_RANGE);// Check if only one fade percentage is specified
-	else if (!nbs_export && ((fade_start_percent != -1 || fade_end_percent != -1) || panning_mode != Panning::PAN_NONE)) return Error::print_error(Error::MISSING_NBS_EXPORT);
+	else if (!nbs_export && ((fade_start_percent != -1 || fade_end_percent != -1) || panning_mode != Panning::PAN_NONE || random_pitches || custom_instrument_index > -1)) return Error::print_error(Error::MISSING_NBS_EXPORT);
 	if (note_mode != GenerationMode::QUADRATIC && flip_note_quadratic_functions) return Error::print_error(Error::NOTE_MODE_NOT_QUADRATIC);
 	if (fade_mode != GenerationMode::QUADRATIC && flip_fade_quadratic_functions) return Error::print_error(Error::FADE_MODE_NOT_QUADRATIC);
 	if (note_mode != GenerationMode::RANDOM && random_pitches) return Error::print_error(Error::MISSING_RANDOM);
@@ -301,7 +329,7 @@ int main(int argc, char* argv[])
 		short layer_count = 33;
 		file.write_short(0); // Song length in < NBS v5, otherwise *ALWAYS* 0
 		file.write_byte(5); // Version
-		file.write_byte(16); // Vanilla instrument count
+		file.write_byte(Instrument::MAX_VANILLA + 1); // Vanilla instrument count
 		file.write_short(static_cast<short>(length)); // Song length
 		file.write_short(layer_count); // Layer count
 		for (int i = 0; i < 4; i++) file.write_c_string(""); // Song name, song author, song original author, song description
@@ -332,7 +360,7 @@ int main(int argc, char* argv[])
 				file.write_short(1); // 1 note on the next tick
 				file.write_short(1); // Note on layer 0
 			}
-			file.write_byte(static_cast<byte>(note.get_instrument().get_instrument_id())); // Set instrument
+			file.write_byte(static_cast<byte>(instrument != Instrument::CUSTOM ? note.get_instrument().get_instrument_id() : Instrument::MAX_VANILLA + 1 + custom_instrument_index)); // Set instrument
 			if (!no_output_info && debug) cout << (note < Note("C9")) << ", " << (note > Note("C8")) << endl;
 			if (!no_output_info && debug) cout << note.to_string() << endl;
 			int id = note.get_id();
@@ -392,8 +420,8 @@ int main(int argc, char* argv[])
 						int totalLength = length - (include_end_note ? 1 : 0);
 						double lengthSquareReciprocal = 1.0 / Utility::square(totalLength);
 						int velocity_difference = fade_end_percent - fade_start_percent;
-						if (flip_fade_quadratic_functions) velocity = -velocity_difference * lengthSquareReciprocal * Utility::square(index - totalLength) + fade_end_percent;
-						else velocity = velocity_difference * lengthSquareReciprocal * Utility::square(index) + fade_start_percent;
+						if (flip_fade_quadratic_functions) velocity = static_cast<byte>(-velocity_difference * lengthSquareReciprocal * Utility::square(index - totalLength) + fade_end_percent);
+						else velocity = static_cast<byte>(velocity_difference * lengthSquareReciprocal * Utility::square(index) + fade_start_percent);
 						break;
 					}
 					case GenerationMode::RANDOM:
@@ -451,12 +479,23 @@ int main(int argc, char* argv[])
 			file.write_byte(100); // Layer volume
 			file.write_byte(100); // Layer panning
 		}
-		file.write_byte(0); // Custom Instruments
+		if (instrument != Instrument::CUSTOM) file.write_byte(0); // Custom instrument count
+		else
+		{
+			file.write_byte(custom_instrument_index + 1); // Custom instrument count
+			for (int i = 0; i < custom_instrument_index + 1; i++) // `<=` should be needed, as the number is actually the index of the instrument
+			{
+				file.write_c_string(("Custom " + std::to_string(custom_instrument_index + 1)).c_str()); // Instrument name
+				file.write_c_string(""); // Sound file
+				file.write_byte(45); // Custom instrument key, 45 = F#4
+				file.write_bool(true); // Show playback on piano
+			}
+		}
 		file.flush();
 		file.close();
 		if (!no_output_info) cout << "File successfully saved as \"" << full_path.string() << "\"" << endl;
 		if (!no_output_info) cout << "Closing in 5 seconds..." << endl;
-		Sleep(5000);
+		if (delay > 0) Sleep(delay);
 	}
 }
 
@@ -536,13 +575,12 @@ void print_help()
 {
 	cout << "Notes are standard musical notes followed by a number for their respective octave (i.e. F#4) with an optionally specified cent value preceding it (i.e: C4+32c)" << endl;
 	cout << "Usage:" << endl;
+	cout << "-no-delay: disables the 5 second delay on completion; useful for scripting!" << endl;
 	cout << "-debug: enables debug mode, which outputs additional information about the generated progression" << endl;
 	cout << "-no-info: disables outputting any printed text other than the generated progression (unless exporting as NBS, in which case this will output nothing) and errors to the console; useful for parsing output with a script" << endl;
 	cout << "-start: the first note to start the progression from (required)" << endl;
 	cout << "-end: the last note to end the progression to (required)" << endl;
 	cout << "-length: the length of the progression notes (required)" << endl;
-	cout << "-random: generates notes randomly between the start and end note instead of as a progression" << endl;
-	cout << "\t-random-pitch: if generating notes randomly, the generated notes will also be given a random pitch within [-49, 50] cents" << endl;
 	cout << "-include-base-note: includes the first note in the generated progression;" << endl;
 	cout << "\tthis will also cause the progression to generate one less note (as the inputted first note will become the outputted first note)" << endl;
 	cout << "-include-end-note: includes the last note in the generated progression;" << endl;
@@ -551,14 +589,20 @@ void print_help()
 	cout << "-note-mode: allows you to change the note generation mode;" << endl;
 	cout << "\tlinear: a generation type that changes the note key consistently over time; for example, for a full C scale: C, C#, D, D#, E, ..." << endl;
 	cout << "\tquadratic: a generation type that changes the note key increasingly over time; for example, for the same scale: C, E-3c, F#-35c, G4+14, ... C-40c, C-10c, C+1" << endl;
-	cout << "\t\tas you can see, the per-note jumps start off extremely rapid, but significantly slow down toward the end;" << endl;
-	cout << "\t\t-flip_note_quadratic_functions: reverses the functions used for quadratic note generation;" << endl;
-	cout << "\t\tthis can be useful for making the outputted note progression have a different feel, such as *starting* with a large drop-off instead of slowly changing to it" << endl;
+	cout << "\t\tthis causes the per-note jumps start off extremely rapid, but significantly slow down toward the end;" << endl;
+	cout << "\t\t-flip_note_quadratic_functions: reverses the functions used for quadratic note generation, effectively flipping the order of the generation;" << endl;
+	cout << "\t\tthis can be useful for making the outputted note progression have a different feel, such as *starting* with a large drop-off instead of slowly changing to it" << endl << endl;
+	cout << "\trandom: a generation type that generates notes randomly between the start and end note;" << endl;
+	cout << "\t\t-random-pitch: if generating notes randomly, this will give the random notes a random pitch within [-49, 50] cents" << endl;
 	cout << "NBS options:" << endl;
 	cout << "-nbs: enables exporting as a Note Block Studio song (.nbs) instead of as text;" << endl;
 	cout << "\t-nbs also enables other arguments for exporting:" << endl;
 	cout << "-instrument: specifies the instrument to use for the notes;" << endl;
-	cout << "\tMust be a valid note block instrument, such as pling or harp!" << endl;
+	cout << "\tMust be a valid note block instrument, such as pling or harp;" << endl;
+	cout << "\tthis can also be \"custom\" for a custom instrument too; however, you may want to consider setting the next argument:" << endl;
+	cout << "-custom-instrument-index: if using a custom instrument, this specifies the index of the custom instrument to output as;" << endl;
+	cout << "\tif using the first custom instrument, this is actually implicit and automatically set;" << endl;
+	cout << "\tkeep in mind that the first custom instrument starts at index 0!" << endl;
 	cout << "Fade options:" << endl;
 	cout << "-fade-start: specifies the minimum velocity the fade should start from; cannot be lower than 1 or greater than 100!" << endl;
 	cout << "-fade-end: specifies the maximum velocity the fade should end on; cannot be less than one, less than the fade start percent, or greater than 100!" << endl;

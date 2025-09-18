@@ -27,6 +27,7 @@ Instrument Instrument::get_instrument(std::string name)
 	else if (name == "BIT") return BIT;
 	else if (name == "BANJO") return BANJO;
 	else if (name == "PLING") return PLING;
+	else if (name == "CUSTOM") return CUSTOM;
 	else throw std::invalid_argument("The inputted instrument does not correspond to a valid Minecraft note block instrument");
 }
 

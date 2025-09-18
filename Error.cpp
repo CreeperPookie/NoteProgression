@@ -18,6 +18,9 @@ std::string Error::get_error_message() const
 	switch (error)
 	{
 		case SUCCESS: return "";
+		case MISSING_DELAY: return "The provided completion delay argument wasn't specified!";
+		case INVALID_DELAY: return "The provided completion delay argument is not a valid number!";
+		case DELAY_OUT_OF_RANGE: return "The provided completion delay argument is out of range!";
 		case MISSING_START_NOTE: return "The provided start note argument wasn't specified!";
 		case INVALID_START_NOTE: return "The provided start note argument is not a valid musical note!";
 		case MISSING_END_NOTE: return "The provided end note argument wasn't specified!";
@@ -39,6 +42,10 @@ std::string Error::get_error_message() const
 		case FADE_MODE_NOT_QUADRATIC: return "The provided fade mode is not quadratic!";
 		case MISSING_INSTRUMENT: return "The provided instrument argument wasn't specified!";
 		case INVALID_INSTRUMENT: return "The provided instrument argument is not a valid Minecraft note block instrument!";
+		case MISSING_CUSTOM_INSTRUMENT: return "The provided custom instrument index wasn't specified!";
+		case INVALID_CUSTOM_INSTRUMENT: return "The provided custom instrument index is not a valid index!";
+		case CUSTOM_INSTRUMENT_OUT_OF_RANGE: return "The provided custom instrument index is out of range; only 256 instruments are allowed, including vanilla instruments!";
+		case CUSTOM_INSTRUMENT_INDEX_REQUIRED: return "The provided note mode is custom, but no custom instrument index was specified!";
 		case MISSING_PANNING_MODE: return "The provided panning mode argument wasn't specified!";
 		case INVALID_PANNING_MODE: return "The provided panning mode argument is not a valid panning mode!";
 		case MISSING_NBS_EXPORT: return "The provided arguments require NBS export to be enabled!!";
@@ -56,6 +63,9 @@ Error Error::get_error_by_name(std::string name)
 {
     std::ranges::transform(name, name.begin(), toupper);
 	if (name == "SUCCESS") return SUCCESS;
+	else if (name == "MISSING_DELAY") return MISSING_DELAY;
+	else if (name == "INVALID_DELAY") return INVALID_DELAY;
+	else if (name == "DELAY_OUT_OF_RANGE") return DELAY_OUT_OF_RANGE;
 	else if (name == "MISSING_START_NOTE") return MISSING_START_NOTE;
 	else if (name == "INVALID_START_NOTE") return INVALID_START_NOTE;
 	else if (name == "MISSING_END_NOTE") return MISSING_END_NOTE;
@@ -77,6 +87,10 @@ Error Error::get_error_by_name(std::string name)
 	else if (name == "FADE_MODE_NOT_QUADRATIC") return FADE_MODE_NOT_QUADRATIC;
 	else if (name == "MISSING_INSTRUMENT") return MISSING_INSTRUMENT;
 	else if (name == "INVALID_INSTRUMENT") return INVALID_INSTRUMENT;
+	else if (name == "MISSING_CUSTOM_INSTRUMENT") return MISSING_CUSTOM_INSTRUMENT;
+	else if (name == "INVALID_CUSTOM_INSTRUMENT") return INVALID_CUSTOM_INSTRUMENT;
+	else if (name == "CUSTOM_INSTRUMENT_OUT_OF_RANGE") return CUSTOM_INSTRUMENT_OUT_OF_RANGE;
+	else if (name == "CUSTOM_INSTRUMENT_REQUIRED") return CUSTOM_INSTRUMENT_INDEX_REQUIRED;
 	else if (name == "MISSING_PANNING_MODE") return MISSING_PANNING_MODE;
 	else if (name == "INVALID_PANNING_MODE") return INVALID_PANNING_MODE;
 	else if (name == "MISSING_NBS_EXPORT") return MISSING_NBS_EXPORT;
@@ -87,6 +101,11 @@ Error Error::get_error_by_name(std::string name)
 	else if (name == "MISSING_RANDOM_PATTERN") return MISSING_RANDOM_PATTERN;
 	else if (name == "INVALID_RANDOM_PATTERN") return INVALID_RANDOM_PATTERN;
 	else throw std::invalid_argument("The inputted Error type " + name + " does not correspond to a valid Error");
+}
+
+int Error::print_error(const Error error, const std::string& extra)
+{
+	return print_error(error, std::initializer_list<std::string_view>{extra});
 }
 
 int Error::print_error(const Error error, const std::initializer_list<std::string_view> extra = {})

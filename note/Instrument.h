@@ -22,7 +22,10 @@ public:
 		DIDGERIDOO,
 		BIT,
 		BANJO,
-		PLING
+		PLING,
+		CUSTOM,
+		MAX_VANILLA = PLING, // comparison only!
+		MAX = CUSTOM
 	};
 	Instrument() = default;
 	constexpr Instrument(const InstrumentType instrument_type) : instrument_type(instrument_type) {}

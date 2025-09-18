@@ -8,6 +8,9 @@ public:
 	enum ErrorType
 	{
 		SUCCESS, // Should not be used, not an "error"
+		MISSING_DELAY,
+		INVALID_DELAY,
+		DELAY_OUT_OF_RANGE,
 		MISSING_START_NOTE,
 		INVALID_START_NOTE,
 		MISSING_END_NOTE,
@@ -29,6 +32,10 @@ public:
 		FADE_MODE_NOT_QUADRATIC,
 		MISSING_INSTRUMENT,
 		INVALID_INSTRUMENT,
+		MISSING_CUSTOM_INSTRUMENT,
+		INVALID_CUSTOM_INSTRUMENT,
+		CUSTOM_INSTRUMENT_OUT_OF_RANGE,
+		CUSTOM_INSTRUMENT_INDEX_REQUIRED,
 		MISSING_PANNING_MODE,
 		INVALID_PANNING_MODE,
 		MISSING_NBS_EXPORT,
@@ -46,6 +53,7 @@ public:
 	int get_error_code() const;
 	[[nodiscard]] std::string get_error_message() const;
 	static Error get_error_by_name(std::string name);
+	static int print_error(Error error, const std::string& extra);
 	static int print_error(Error error, std::initializer_list<std::string_view> extra);
 	static int print_error(ErrorType error_type);
 	bool operator==(Error other_error) const;
