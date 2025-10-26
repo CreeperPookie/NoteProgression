@@ -13,8 +13,8 @@ Panning Panning::get_panning_type_by_name(std::string name)
     std::ranges::transform(name, name.begin(), ::toupper);
 	if (name.starts_with("PAN_")) name = name.substr(4);
 	if (name == "NONE") return PAN_NONE;
-	else if (name == "LEFT_RIGHT") return PAN_LEFT_RIGHT;
-	else if (name == "RIGHT_LEFT") return PAN_RIGHT_LEFT;
+	else if (name == "LEFT_RIGHT" || name == "LEFT_TO_RIGHT") return PAN_LEFT_RIGHT;
+	else if (name == "RIGHT_LEFT" || name == "RIGHT_TO_LEFT") return PAN_RIGHT_LEFT;
 	else if (name == "STEREO") return PAN_STEREO;
 	else throw std::invalid_argument("The inputted panning type does not correspond to a valid panning type");
 }

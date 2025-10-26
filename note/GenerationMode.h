@@ -7,6 +7,7 @@ class GenerationMode
 public:
 	enum GenerationType
 	{
+		STATIC,
 		LINEAR,
 		QUADRATIC,
 		RANDOM

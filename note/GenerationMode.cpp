@@ -11,7 +11,8 @@ int GenerationMode::get_fade_id() const
 GenerationMode GenerationMode::get_generation_mode(std::string name)
 {
     std::ranges::transform(name, name.begin(), toupper);
-	if (name == "LINEAR") return LINEAR;
+	if (name == "STATIC") return STATIC;
+	else if (name == "LINEAR") return LINEAR;
 	else if (name == "QUADRATIC") return QUADRATIC;
 	else if (name == "RANDOM") return RANDOM;
 	else throw std::invalid_argument("The inputted mode \"" + name + "\" does not correspond to any valid fade mode");

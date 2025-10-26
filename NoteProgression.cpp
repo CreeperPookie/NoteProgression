@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
 			print_help();
 			return 0;
 		}
-		if (is_argument(argument, {"start", "start-note", "first-note"}))
+		if (is_argument(argument, {"start", "note", "start-note", "first-note"}))
 		{
 			if (argc == index + 1) return Error::print_error(Error::MISSING_START_NOTE);
 			start_note = argv[++index];
@@ -215,8 +215,13 @@ int main(int argc, char* argv[])
 		cin >> length;
 	}
 	if (start_note.empty()) return Error::print_error(Error::MISSING_START_NOTE);
+	else if (note_mode == GenerationMode::LINEAR && end_note.empty() || start_note == end_note)
+	{
+		note_mode = GenerationMode::STATIC;
+		if (!no_output_info && debug) cout << "End note not specified or duplicated, assuming static note generation!" << endl;
+	}
 	else if (end_note.empty()) return Error::print_error(Error::MISSING_END_NOTE);
-	else if (length == -1) return Error::print_error(Error::MISSING_LENGTH);
+	if (length == -1) return Error::print_error(Error::MISSING_LENGTH);
 	int offset = 2;
 	if (include_base_note) offset--;
 	if (include_end_note) offset--;
@@ -243,14 +248,16 @@ int main(int argc, char* argv[])
 	start_note_instance.set_instrument(instrument);
 	end_note_instance.set_instrument(instrument);
 	int start_semitones = start_note_instance.compare(end_note_instance);
-	if (start_note_instance == end_note_instance) return Error::print_error(Error::SAME_NOTES);
 	Note current_note = start_note_instance.clone();
 	current_note.set_instrument(instrument);
-	if (note_mode == GenerationMode::RANDOM)
+	if (note_mode == GenerationMode::STATIC || note_mode == GenerationMode::RANDOM)
 	{
 		for (int i = 0; i < length - offset; i++)
 		{
-			notes.push_back(generate_random_note(random, start_note_instance, end_note_instance, instrument, random_pitches, random_note_pattern));
+			Note note;
+			if (note_mode == GenerationMode::STATIC) note = current_note;
+			else note = generate_random_note(random, start_note_instance, end_note_instance, instrument, random_pitches, random_note_pattern);
+			notes.push_back(note);
 		}
 	}
 	else if (include_base_note) notes.push_back(current_note);
@@ -263,7 +270,7 @@ int main(int argc, char* argv[])
 			if (current_note != end_note_instance) notes.push_back(current_note.clone());
 		}
 	}
-	else if (note_mode != GenerationMode::RANDOM)
+	else if (note_mode != GenerationMode::STATIC && note_mode != GenerationMode::RANDOM)
 	{
 		int totalLength = length;
 		if (include_end_note) totalLength--;
@@ -408,11 +415,12 @@ int main(int argc, char* argv[])
 			{
 				// https://www.desmos.com/calculator/59t9zqhjqe
 				if (fade_start_percent == fade_end_percent) velocity = fade_end_percent;
-				else switch (fade_mode)
+				else if (length > 1) switch (fade_mode)
 				{
 					case GenerationMode::LINEAR:
 					{
-						velocity = static_cast<byte>(round((-index / static_cast<double>(length)) * (fade_start_percent - fade_end_percent) + fade_start_percent));
+						int totalLength = length - (include_end_note ? 1 : 0);
+						velocity = static_cast<byte>(round((-index / static_cast<double>(totalLength)) * (fade_start_percent - fade_end_percent) + fade_start_percent));
 						break;
 					}
 					case GenerationMode::QUADRATIC:
@@ -437,15 +445,16 @@ int main(int argc, char* argv[])
 			}
 			file.write_byte(velocity); // Note velocity
 			byte panning = 100; // Note panning, 100 is perfectly centered
-			if (panning != Panning::PAN_NONE)
+			if (panning_mode != Panning::PAN_NONE)
 			{
-				switch (panning)
+				int totalLength = length - (include_end_note ? 1 : 0);
+				if (totalLength > 0) switch (panning_mode)
 				{
 					case Panning::PAN_LEFT_RIGHT:
-						panning = static_cast<byte>(round((index / static_cast<double>(length)) * 200));
+						panning = static_cast<byte>(round((index / static_cast<double>(totalLength)) * 200));
 						break;
 					case Panning::PAN_RIGHT_LEFT:
-						panning = static_cast<byte>(round(((-index / static_cast<double>(length)) * 200)) + 200);
+						panning = static_cast<byte>(round(((-index / static_cast<double>(totalLength)) * 200)) + 200);
 						break;
 					case Panning::PAN_STEREO:
 						panning = index % 2 == 0 ? 50 : 150; // Alternating from 50 panning left to 50 panning right every tick
