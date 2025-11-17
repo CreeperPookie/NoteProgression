@@ -1,8 +1,5 @@
 #include "Instrument.h"
 
-#include <algorithm>
-#include <stdexcept>
-
 int Instrument::get_instrument_id() const
 {
 	return instrument_type;
@@ -10,7 +7,8 @@ int Instrument::get_instrument_id() const
 
 Instrument Instrument::get_instrument(std::string name)
 {
-	std::ranges::transform(name, name.begin(), ::toupper);
+	std::ranges::transform(name, name.begin(), toupper);
+	Utility::replace_all(name, "-", "_");
 	if (name == "HARP") return HARP;
 	else if (name == "DOUBLE_BASS") return DOUBLE_BASS;
 	else if (name == "BASS_DRUM") return BASS_DRUM;

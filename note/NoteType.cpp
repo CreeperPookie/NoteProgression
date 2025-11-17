@@ -25,17 +25,17 @@ NoteType::NoteType(const int key)
 	note = static_cast<Notes>((key + 9) % 12);
 }
 
-int NoteType::getMaxOrdinal()
+int NoteType::get_max_ordinal()
 {
 	return MAX;
 }
 
-int NoteType::getOrdinal() const
+int NoteType::get_ordinal() const
 {
 	return note;
 }
 
-std::string NoteType::getName() const
+std::string NoteType::get_name() const
 {
 	switch (note)
 	{
@@ -55,12 +55,12 @@ std::string NoteType::getName() const
 	}
 }
 
-NoteType::Notes NoteType::getNote() const
+NoteType::Notes NoteType::get_note() const
 {
 	return note;
 }
 
-void NoteType::decreaseNote()
+void NoteType::decrease_note()
 {
 	int noteOrdinal = note;
 	if (noteOrdinal == 0) noteOrdinal = MAX;
@@ -68,7 +68,7 @@ void NoteType::decreaseNote()
 	note = static_cast<Notes>(noteOrdinal);
 }
 
-void NoteType::increaseNote()
+void NoteType::increase_note()
 {
 	int noteOrdinal = note;
 	if (noteOrdinal == MAX) noteOrdinal = 0;
@@ -78,12 +78,12 @@ void NoteType::increaseNote()
 
 std::strong_ordering NoteType::operator<=>(const NoteType note_type) const
 {
-	return this->getOrdinal() <=> note_type.getOrdinal();
+	return this->get_ordinal() <=> note_type.get_ordinal();
 }
 
 bool NoteType::operator==(const NoteType note_type) const
 {
-	return note_type.getNote() == note;
+	return note_type.get_note() == note;
 }
 
 bool NoteType::operator==(const Notes note_type) const
@@ -100,7 +100,7 @@ int NoteType::compare(const NoteType note_type) const
 		NoteType temp = *this;
 		while (true)
 		{
-			temp.increaseNote();
+			temp.increase_note();
 			difference++;
 			if (temp == note_type || temp == _) break;
 		}
@@ -110,7 +110,7 @@ int NoteType::compare(const NoteType note_type) const
 		NoteType temp = note_type;
 		while (true)
 		{
-			temp.decreaseNote();
+			temp.decrease_note();
 			difference++;
 			if (temp == note_type || temp == MAX) break;
 		}

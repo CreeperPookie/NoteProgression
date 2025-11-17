@@ -34,10 +34,10 @@ public:
 	void offset_cents(int cents);
 	[[nodiscard]] int get_id() const;
 	[[nodiscard]] Note clone() const;
-	string to_string() const;
-	int compare(Note note) const;
-	bool equals(Note note) const;
-	bool equals_ignore_pitch(Note note) const;
+	[[nodiscard]] string to_string() const;
+	[[nodiscard]] double compare(Note note) const;
+	[[nodiscard]] bool equals(Note note) const;
+	[[nodiscard]] bool equals_ignore_pitch(Note note) const;
 
 	//bool operator<(Note note);
 	//bool operator>(Note note);

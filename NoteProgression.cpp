@@ -4,7 +4,9 @@
 #include <windows.h>
 
 #include "Error.h"
-#include "util/RandomPattern.h"
+#include "OutputData.h"
+#include "note/random/RandomData.h"
+#include "note/random/RandomPattern.h"
 #include "Utility.h"
 #include "util/BinaryFile.h"
 
@@ -17,6 +19,7 @@ int main(int argc, char* argv[])
 	string start_note;
 	string end_note;
 	int length = -1;
+	bool delay_set = false;
 	long delay = 5000;
 	bool debug = false;
 	bool no_output_info = false;
@@ -27,6 +30,7 @@ int main(int argc, char* argv[])
 	bool flip_note_quadratic_functions = false;
 	bool flip_fade_quadratic_functions = false;
 	int custom_instrument_index = -1;
+	int random_segment_period = -1;
 	int fade_start_percent = -1;
 	int fade_end_percent = -1;
 	RandomPattern random_note_pattern;
@@ -40,7 +44,7 @@ int main(int argc, char* argv[])
 		string argument = argv[index];
 		if (is_argument(argument, {"no-delay", "no-cooldown"}))
 		{
-			if (delay > 0) return Error::print_error(Error::INVALID_DELAY, "The completion delay cannot be set if the delay is disabled with -" + argument + "!");
+			if (delay_set && delay > 0) return Error::print_error(Error::INVALID_DELAY, "The completion delay cannot be set if the delay is disabled with " + argument + "!");
 			else delay = 0;
 		}
 		else if (is_argument(argument, {"delay", "custom-delay"}))
@@ -51,7 +55,8 @@ int main(int argc, char* argv[])
 			size_t converted_chars;
 			delay = std::stol(string(delay_argument), &converted_chars);
 			if (converted_chars != strlen(delay_argument)) return Error::print_error(Error::INVALID_DELAY);
-			if (delay < 0) return Error::print_error(Error::DELAY_OUT_OF_RANGE);
+			else if (delay < 0) return Error::print_error(Error::DELAY_OUT_OF_RANGE);
+			else delay_set = true;
 		}
 		else if (is_argument(argument, "debug")) debug = true;
 		else if (is_argument(argument, {"no-info", "no-log-info", "no-output-info"})) no_output_info = true;
@@ -102,6 +107,23 @@ int main(int argc, char* argv[])
 			{
 				return Error::print_error(Error::INVALID_RANDOM_PATTERN);
 			}
+		}
+		if (is_argument(argument, {"random-period", "random-note-period", "random-segment-period", "random-note-segment-length", "random-note-segment-period"}))
+		{
+			if (argc == index + 1) return Error::print_error(Error::MISSING_RANDOM_PERIOD);
+			const char* random_segment_period_argument = argv[++index];
+			size_t converted_chars;
+			try
+			{
+				random_segment_period = std::stoi(string(random_segment_period_argument), &converted_chars);
+			}
+			catch (std::invalid_argument &e)
+			{
+				return Error::print_error(Error::INVALID_RANDOM_PERIOD);
+			}
+			if (converted_chars != strlen(random_segment_period_argument)) return Error::print_error(Error::INVALID_RANDOM_PERIOD);
+			else if (random_segment_period < 1) return Error::print_error(Error::RANDOM_PERIOD_TOO_LOW);
+			else if (random_segment_period > length) return Error::print_error(Error::RANDOM_PERIOD_TOO_HIGH);
 		}
 		if (is_argument(argument, {"mode", "note-mode"}))
 		{
@@ -201,20 +223,12 @@ int main(int argc, char* argv[])
 			}
 		}
 		if (is_argument(argument, "nbs")) nbs_export = true;
-		if (is_argument(argument, { "include-start-note", "add-start-note" })) include_base_note = true;
-		if (is_argument(argument, { "include-end-note", "add-end-note" })) include_end_note = true;
+		if (is_argument(argument, { "include-start-note", "include-base-note", "add-start-note" })) include_base_note = true;
+		if (is_argument(argument, { "include-end-note", "include-end-note", "add-end-note" })) include_end_note = true;
 	}
-	if (argc < 6)
-	{
-		cerr << "Invalid arguments!" << std::endl;
-		cout << "Enter start note (i.e. A4): ";
-		cin >> start_note;
-		cout << "Enter end note (i.e. G#5): ";
-		cin >> end_note;
-		cout << "Enter period length to transition for: (i.e. 20): ";
-		cin >> length;
-	}
-	if (start_note.empty()) return Error::print_error(Error::MISSING_START_NOTE);
+	if (note_mode.is_random() && start_note.empty()) start_note = "A0";
+	if (note_mode.is_random() && end_note.empty()) end_note = "C8";
+	else if (start_note.empty()) return Error::print_error(Error::MISSING_START_NOTE);
 	else if (note_mode == GenerationMode::LINEAR && end_note.empty() || start_note == end_note)
 	{
 		note_mode = GenerationMode::STATIC;
@@ -229,10 +243,10 @@ int main(int argc, char* argv[])
 	else if (instrument == Instrument::CUSTOM && custom_instrument_index == -1) return Error::print_error(Error::CUSTOM_INSTRUMENT_INDEX_REQUIRED); // with the 0 fallback, this really shouldn't happen
 	else if (custom_instrument_index >= 240) return Error::print_error(Error::CUSTOM_INSTRUMENT_OUT_OF_RANGE, "For NBS v5, this is 240 custom instruments! (indexes start at 0)");
 	else if ((fade_start_percent == -1) != (fade_end_percent == -1)) return Error::print_error(Error::MISSING_FADE_RANGE);// Check if only one fade percentage is specified
-	else if (!nbs_export && ((fade_start_percent != -1 || fade_end_percent != -1) || panning_mode != Panning::PAN_NONE || random_pitches || custom_instrument_index > -1)) return Error::print_error(Error::MISSING_NBS_EXPORT);
+	else if (!nbs_export && ((fade_start_percent != -1 || fade_end_percent != -1) || panning_mode != Panning::PAN_NONE || custom_instrument_index > -1)) return Error::print_error(Error::MISSING_NBS_EXPORT);
 	if (note_mode != GenerationMode::QUADRATIC && flip_note_quadratic_functions) return Error::print_error(Error::NOTE_MODE_NOT_QUADRATIC);
 	if (fade_mode != GenerationMode::QUADRATIC && flip_fade_quadratic_functions) return Error::print_error(Error::FADE_MODE_NOT_QUADRATIC);
-	if (note_mode != GenerationMode::RANDOM && random_pitches) return Error::print_error(Error::MISSING_RANDOM);
+	if (!note_mode.is_random() && random_pitches) return Error::print_error(Error::MISSING_RANDOM);
 	std::vector<Note> notes;
 	Note start_note_instance;
 	Note end_note_instance;
@@ -247,10 +261,9 @@ int main(int argc, char* argv[])
 	}
 	start_note_instance.set_instrument(instrument);
 	end_note_instance.set_instrument(instrument);
-	int start_semitones = start_note_instance.compare(end_note_instance);
-	Note current_note = start_note_instance.clone();
-	current_note.set_instrument(instrument);
-	if (note_mode == GenerationMode::STATIC || note_mode == GenerationMode::RANDOM)
+	notes = get_note_progression(start_note_instance, end_note_instance, length, note_mode, include_base_note, include_end_note, flip_note_quadratic_functions, RandomData(random, random_pitches, random_segment_period, random_note_pattern), OutputData(!no_output_info, debug));
+	/*
+	if (note_mode == GenerationMode::STATIC || note_mode == GenerationMode::RANDOM_NORMAL)
 	{
 		for (int i = 0; i < length - offset; i++)
 		{
@@ -258,6 +271,19 @@ int main(int argc, char* argv[])
 			if (note_mode == GenerationMode::STATIC) note = current_note;
 			else note = generate_random_note(random, start_note_instance, end_note_instance, instrument, random_pitches, random_note_pattern);
 			notes.push_back(note);
+		}
+	}
+	else if (note_mode == GenerationMode::RANDOM_LINEAR || note_mode == GenerationMode::RANDOM_QUADRATIC)
+	{
+		bool static_random_period = random_segment_period == -1;
+		if (static_random_period) random_segment_period = random.get_random_int(2, 10);
+		while (notes.size() < length - offset)
+		{
+			Note segment_start = generate_random_note(random, start_note_instance, end_note_instance, instrument, random_pitches, random_note_pattern);
+			Note segment_end = generate_random_note(random, start_note_instance, end_note_instance, instrument, random_pitches, random_note_pattern);
+			uint64_t clamped_random_segment_period = std::min(static_cast<uint64_t>(random_segment_period), length - offset - notes.size());
+			std::vector<Note> random_segments = get_note_progression(segment_start, segment_end, length - offset, note_mode, include_base_note, clamped_random_segment_period == random_segment_period ? true : include_end_note, flip_note_quadratic_functions);
+			notes.insert(notes.end(), random_segments.begin(), random_segments.end());
 		}
 	}
 	else if (include_base_note) notes.push_back(current_note);
@@ -270,7 +296,7 @@ int main(int argc, char* argv[])
 			if (current_note != end_note_instance) notes.push_back(current_note.clone());
 		}
 	}
-	else if (note_mode != GenerationMode::STATIC && note_mode != GenerationMode::RANDOM)
+	else if (note_mode == GenerationMode::LINEAR || note_mode == GenerationMode::QUADRATIC)
 	{
 		int totalLength = length;
 		if (include_end_note) totalLength--;
@@ -311,6 +337,7 @@ int main(int argc, char* argv[])
 		}
 		if (include_end_note) notes.push_back(end_note_instance);
 	}
+	*/
 	if (!nbs_export) print_output(notes, no_output_info);
 	else
 	{
@@ -351,7 +378,7 @@ int main(int argc, char* argv[])
 		file.write_bool(false); // Looping
 		file.write_byte(0); // Max loop count
 		file.write_short(0); // Loop start tick
-		int extended_semitones = 0;
+		double extended_semitones = 0;
 		bool out_of_range = false;
 		for (int index = 0; index < length - offset; index++)
 		{
@@ -432,7 +459,7 @@ int main(int argc, char* argv[])
 						else velocity = static_cast<byte>(velocity_difference * lengthSquareReciprocal * Utility::square(index) + fade_start_percent);
 						break;
 					}
-					case GenerationMode::RANDOM:
+					case GenerationMode::RANDOM_NORMAL:
 					{
 						velocity = random.get_random_int(fade_start_percent, fade_end_percent);
 						break;
@@ -447,8 +474,7 @@ int main(int argc, char* argv[])
 			byte panning = 100; // Note panning, 100 is perfectly centered
 			if (panning_mode != Panning::PAN_NONE)
 			{
-				int totalLength = length - (include_end_note ? 1 : 0);
-				if (totalLength > 0) switch (panning_mode)
+				if (int totalLength = length - (include_end_note ? 1 : 0); totalLength > 0) switch (panning_mode)
 				{
 					case Panning::PAN_LEFT_RIGHT:
 						panning = static_cast<byte>(round((index / static_cast<double>(totalLength)) * 200));
@@ -497,7 +523,7 @@ int main(int argc, char* argv[])
 				file.write_c_string(("Custom " + std::to_string(custom_instrument_index + 1)).c_str()); // Instrument name
 				file.write_c_string(""); // Sound file
 				file.write_byte(45); // Custom instrument key, 45 = F#4
-				file.write_bool(true); // Show playback on piano
+				file.write_bool(true); // Show playback on NBS piano
 			}
 		}
 		file.flush();
@@ -586,7 +612,8 @@ void print_help()
 	cout << "Usage:" << endl;
 	cout << "-no-delay: disables the 5 second delay on completion; useful for scripting!" << endl;
 	cout << "-debug: enables debug mode, which outputs additional information about the generated progression" << endl;
-	cout << "-no-info: disables outputting any printed text other than the generated progression (unless exporting as NBS, in which case this will output nothing) and errors to the console; useful for parsing output with a script" << endl;
+	cout << "-no-info: disables outputting any printed text other than the generated progression (unless exporting as NBS, in which case this will output nothing) " << endl;
+	cout << "\tand errors to the console; useful for parsing output with a script" << endl;
 	cout << "-start: the first note to start the progression from (required)" << endl;
 	cout << "-end: the last note to end the progression to (required)" << endl;
 	cout << "-length: the length of the progression notes (required)" << endl;
@@ -602,6 +629,17 @@ void print_help()
 	cout << "\t\t-flip_note_quadratic_functions: reverses the functions used for quadratic note generation, effectively flipping the order of the generation;" << endl;
 	cout << "\t\tthis can be useful for making the outputted note progression have a different feel, such as *starting* with a large drop-off instead of slowly changing to it" << endl << endl;
 	cout << "\trandom: a generation type that generates notes randomly between the start and end note;" << endl;
+	cout << "\trandom-linear: similar to random, except instead of generating entirely random notes," << endl;
+	cout << "\t\tit generates random segments that linearly transition between two randomly generated notes;" << endl;
+	cout << "\trandom-quadratic: similar to random-linear, except instead of generating a linear transition, this will generate a quadratic segments instead;" << endl;
+	cout << "\t\tthese can help smooth the randomness and feel more natural" << endl;
+	cout << "\tstatic: a generation type that outputs the same note repeatedly for the entire length of the progression" << endl;
+	cout << "\tuseful if you the instrument only needs a fade or is percussion!" << endl;
+	cout << "Random note generation options:" << endl;
+	cout << "\t-random-segment-period: if generating notes randomly with random-linear or random-quadratic modes, this specifies the maximum length of each random segment;" << endl;
+	cout << "\t\tif specfied, the segment length will be constant to what you set (unless the last segment is longer than the target length, in which case it will be clamped appropriately)" << endl;
+	cout << "\t\totherwise, this will be randomly chosen *for each segment* between 4 and 10, again not exceeding the total provided length;" << endl;
+	cout << "\t\tthis value cannot be greater than the total length of the progression minus any included base/end notes!" << endl;
 	cout << "\t\t-random-pitch: if generating notes randomly, this will give the random notes a random pitch within [-49, 50] cents" << endl;
 	cout << "NBS options:" << endl;
 	cout << "-nbs: enables exporting as a Note Block Studio song (.nbs) instead of as text;" << endl;
@@ -640,19 +678,169 @@ void print_output(const std::vector<Note>& notes, bool no_output_info)
 	cout << endl;
 }
 
-Note generate_random_note(Random &random, const Note start, const Note end, const Instrument instrument, const bool random_pitch, RandomPattern random_pattern)
+Note generate_random_note(Random &random, Note start, Note end, const Instrument instrument, const bool random_pitch, const RandomPattern& random_pattern)
 {
 	Note result;
-	if (start == end) result = end;
+	if (end < start)
+	{
+		const Note temp = start;
+		start = end;
+		end = temp;
+	}
+	if (!random_pitch && start.equals_ignore_pitch(end) || start == end) result = end;
 	else
 	{
 		do
 		{
-			result = Note(random.get_random_int(end.get_id(), start.get_id()));
+			result = Note(random.get_random_int(start.get_id(), end.get_id()));
 		}
 		while (!random_pattern.is_allowed(result));
 	}
 	result.set_instrument(instrument);
-	if (random_pitch) result.set_cents(random.get_random_int(-49, 50));
+	if (random_pitch) do
+	{
+		result.set_cents(random.get_random_int(-49, 50));
+	}
+	while ((result.equals_ignore_pitch(start) && start.get_cents() < 0 ? result.get_cents() < start.get_cents() : result.get_cents() > start.get_cents()) || (result.equals_ignore_pitch(end) && result.get_cents() > 0 && result.get_cents() > end.get_cents()));
+	else result.set_cents(static_cast<int>(std::round((start.get_cents() + end.get_cents()) / 2.0)));
 	return result;
+}
+
+vector<Note> get_note_progression(const Note segment_start, const Note segment_end, const int segment_length, const GenerationMode note_mode, const bool include_base_note, const bool include_end_note,
+                                  const bool flip_quadratic_functions, const RandomData& random_data, const OutputData& output_data)
+{
+	vector<Note> notes;
+	Note start_note = segment_start.clone();
+	Note end_note = segment_end.clone();
+	int offset = 2;
+	if (include_base_note) offset--;
+	if (include_end_note) offset--;
+	switch (note_mode)
+	{
+		case GenerationMode::STATIC:
+		case GenerationMode::RANDOM_NORMAL:
+		{
+			for (int i = 0; i < segment_length - offset; i++)
+			{
+				Note note;
+				if (note_mode == GenerationMode::STATIC) note = segment_start.clone();
+				else note = generate_random_note(random_data.random, segment_start, segment_end, segment_start.get_instrument(), random_data.random_pitches, random_data.pattern);
+				notes.push_back(note);
+			}
+			break;
+		}
+		case GenerationMode::LINEAR:
+		case GenerationMode::QUADRATIC:
+		case GenerationMode::RANDOM_LINEAR:
+		case GenerationMode::RANDOM_QUADRATIC:
+		{
+			while (notes.size() < segment_length - (include_end_note ? 1 : 0))
+			{
+				int64_t total_length = note_mode.is_random() ? std::min(static_cast<int64_t>(random_data.random_segment_period), static_cast<int64_t>(segment_length - notes.size())) : segment_length;
+				int64_t random_length = -1;
+				if (note_mode.is_random() && total_length < 0) total_length = random_length = random_data.random.get_random_int64(4, std::min(10LL, static_cast<int64_t>(segment_length - notes.size())));
+				if (random_length != -1 && output_data.output_enabled && output_data.debug) cout << "Generated random segment length of " << random_length << " notes" << endl;
+				if (notes.size() + total_length == segment_length - 1) total_length++;
+				const bool is_first_segment = notes.empty();
+				const bool is_last_segment = notes.size() + total_length == segment_length;
+				if (is_first_segment || is_last_segment)
+				{
+					if (is_first_segment && !include_base_note) total_length++;
+					if (is_last_segment && !include_end_note) total_length++;
+				}
+				if (!is_last_segment && note_mode.is_random()) while (true)
+				{
+					if (Note random_note = generate_random_note(random_data.random, segment_start, segment_end, segment_start.get_instrument(), random_data.random_pitches, random_data.pattern); !end_note.equals_ignore_pitch(random_note))
+					{
+						end_note = random_note;
+						break;
+					}
+				}
+				else if (note_mode.is_random()) end_note = segment_end.clone();
+				if (total_length == 2 && total_length == random_length)
+				{
+					notes.push_back(start_note);
+					notes.push_back(end_note);
+					start_note = end_note;
+					continue;
+				}
+				double current_precision_loss = 0;
+				double cent_step_exact = 0;
+				const double semitone_difference = start_note.compare(end_note);
+				int cent_step = 0;
+				if (note_mode == GenerationMode::LINEAR || note_mode == GenerationMode::RANDOM_LINEAR)
+				{
+					cent_step_exact = ((semitone_difference / static_cast<double>(total_length)) * 100.0);
+					if (output_data.output_enabled && output_data.debug) cout << "exact cent step: " << cent_step_exact << endl;
+					cent_step = static_cast<int>(cent_step_exact < 0 ? ceil(cent_step_exact) : floor(cent_step_exact));
+				}
+				Note current_note = start_note.clone();
+				int cent_offset = 0;
+				const uint64_t loop_start = !is_first_segment ? 0 : include_base_note ? 0 : 1;
+				const uint64_t loop_end = total_length - (!is_last_segment ? 0 : (include_end_note ? 0 : 1));
+				for (uint64_t i = loop_start; i < loop_end; i++)
+				{
+					Note last_note;
+					if (note_mode == GenerationMode::QUADRATIC || note_mode == GenerationMode::RANDOM_QUADRATIC)
+					{
+						// https://www.desmos.com/calculator/9jv1asddng
+						double target_semitone;
+						const double lengthSquareReciprocal = 1.0 / static_cast<double>(Utility::square(total_length));
+						const int note_distance = end_note.get_id() - start_note.get_id();
+						if (flip_quadratic_functions) target_semitone = (-note_distance * lengthSquareReciprocal * static_cast<double>(Utility::square(i - total_length)) + end_note.get_id());
+						else target_semitone = (note_distance * lengthSquareReciprocal * static_cast<double>(Utility::square(i)) + start_note.get_id());
+						cent_step_exact = -round((((notes.empty() ? start_note.get_id() : notes[notes.size() - 1].get_id()) * 100) + (notes.empty() ? start_note : notes[notes.size() - 1]).get_cents() - (target_semitone * 100)));
+						cent_step = static_cast<int>(cent_step_exact < 0 ? ceil(cent_step_exact) : floor(cent_step_exact));
+					}
+					last_note = current_note.clone();
+					if ((i > 0 || !include_base_note))
+					{
+						current_precision_loss += cent_step_exact - cent_step;
+						if (output_data.output_enabled && output_data.debug) cout << "new precision loss: " << current_precision_loss << endl;
+						if (current_precision_loss != 0 && abs(current_precision_loss / 0.495) >= 1)
+						{
+							cent_offset = static_cast<int>(round(current_precision_loss + 0.051));
+							if (output_data.output_enabled && output_data.debug) cout << "detected precision loss, adding " << cent_offset << " cents" << endl;
+							current_precision_loss -= cent_offset;
+						}
+						current_note.offset_cents(cent_step + cent_offset);
+						cent_offset = 0;
+					}
+					notes.push_back(current_note.clone());
+				}
+				if (note_mode.is_random() && !is_last_segment) start_note = notes.back().clone();
+				if (output_data.output_enabled && output_data.debug && random_length != -1)
+				{
+					cout << "Created segment of length " << random_length << ": ";
+					for (uint64_t i = notes.size() - random_length; i < notes.size(); i++)
+					{
+						cout << notes[i].to_string();
+						if (i < notes.size() - 1) cout << ", ";
+						else cout << endl;
+					}
+				}
+				if ((!include_end_note && !Utility::is_near(notes.back().compare(end_note), cent_step_exact / 100.0, 0.01)) || (include_end_note && notes.back() != end_note))
+				{
+					int total_cent_offset = end_note.get_cents() - notes.back().get_cents();
+					if (!include_end_note) total_cent_offset -= cent_step;
+					uint64_t start_point = 0;
+					for (int local_cent_offset = 0; local_cent_offset < abs(total_cent_offset); local_cent_offset++)
+					{
+						start_point = static_cast<uint64_t>(0.75 * static_cast<double>(random_data.random.get_random_uint64(start_point, random_length != -1 ? random_length : notes.size())));
+						if (start_point == notes.size()) start_point = 0;
+						int note_offset = total_cent_offset / abs(total_cent_offset);
+						notes.back().offset_cents(note_offset);
+						std::size_t fixer_loop_start = (random_length == -1 ? start_point : notes.size() - random_length);
+						if (is_first_segment && include_base_note && fixer_loop_start == 0) fixer_loop_start++;
+						std::size_t fixer_loop_end = notes.size();
+						if (is_last_segment && include_end_note) fixer_loop_end--;
+						for (uint64_t i = fixer_loop_start; i < fixer_loop_end; i++) notes[i].offset_cents(note_offset);
+					}
+				}
+			}
+			break;
+		}
+		default: {}
+	}
+	return notes;
 }

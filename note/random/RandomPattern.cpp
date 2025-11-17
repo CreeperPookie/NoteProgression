@@ -1,7 +1,7 @@
 #include "RandomPattern.h"
 
 #include "RandomPatternSegment.h"
-#include "Utility.h"
+#include "../../util/Utility.h"
 
 RandomPattern::RandomPattern(const std::string& pattern)
 {
@@ -33,8 +33,8 @@ void RandomPattern::add_segments_from_pattern(const std::string& pattern_string)
 
 bool RandomPattern::validatePattern(std::string pattern)
 {
-	Utility::replaceAll(pattern, ";", ",");
-	Utility::replaceAll(pattern, " ", "");
+	Utility::replace_all(pattern, ";", ",");
+	Utility::replace_all(pattern, " ", "");
 	if (pattern.find(";") != std::string::npos)
 	{
 		for (string segment : Utility::split(pattern, ","))

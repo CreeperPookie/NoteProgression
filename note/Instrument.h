@@ -1,6 +1,10 @@
 #pragma once
 
 #include <string>
+#include <algorithm>
+#include <stdexcept>
+
+#include "Utility.h"
 
 class Instrument
 {
@@ -29,7 +33,7 @@ public:
 	};
 	Instrument() = default;
 	constexpr Instrument(const InstrumentType instrument_type) : instrument_type(instrument_type) {}
-	int get_instrument_id() const;
+	[[nodiscard]] int get_instrument_id() const;
 	static Instrument get_instrument(std::string name);
 	bool operator==(Instrument instrument) const;
 private:

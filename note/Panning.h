@@ -1,6 +1,10 @@
 #pragma once
 
 #include <string>
+#include <algorithm>
+#include <stdexcept>
+
+#include "Utility.h"
 
 class Panning
 {

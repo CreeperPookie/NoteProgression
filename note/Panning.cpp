@@ -1,8 +1,5 @@
 #include "Panning.h"
 
-#include <algorithm>
-#include <stdexcept>
-
 int Panning::get_panning_id() const
 {
     return panning;
@@ -11,6 +8,7 @@ int Panning::get_panning_id() const
 Panning Panning::get_panning_type_by_name(std::string name)
 {
     std::ranges::transform(name, name.begin(), ::toupper);
+	Utility::replace_all(name, "-", "_");
 	if (name.starts_with("PAN_")) name = name.substr(4);
 	if (name == "NONE") return PAN_NONE;
 	else if (name == "LEFT_RIGHT" || name == "LEFT_TO_RIGHT") return PAN_LEFT_RIGHT;

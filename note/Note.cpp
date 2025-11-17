@@ -25,16 +25,22 @@ Note::Note(string note, const Instrument instrument) : instrument(instrument)
 		if (const char octave_char = note[index]; octave_char == '+' || octave_char == '-' || (octave_char >= '0' && octave_char <= '9')) octave_string += octave_char;
 		else break;
 	}
+	string cents_string;
+	std::size_t cents_start_index = octave_string.find('-') != string::npos ? octave_string.find('-') : octave_string.find('+');
+	if (cents_start_index != string::npos && cents_start_index > 0)
+	{
+		cents_string = note.substr(base.size() + cents_start_index);
+		if (cents_string.ends_with('C')) cents_string.erase(cents_string.size() - 1);
+		octave_string.erase(cents_start_index, octave_string.size());
+	}
 	octave = std::stoi(octave_string, &convertedChars);
-	if (convertedChars != octave_string.size()) throw std::invalid_argument("Octave value is not a number");
-	string cents_string = note.substr(base.size() + octave_string.size());
-	if (cents_string.ends_with("c")) cents_string = cents_string.substr(0, cents_string.size() - 1);
+	if (cents_start_index == string::npos && convertedChars != octave_string.size()) throw std::invalid_argument("Octave value is not a number");
 	if (!cents_string.empty())
 	{
 		cents = std::stoi(cents_string, &convertedChars);
 		if (convertedChars != cents_string.size()) throw std::invalid_argument("Cents value is not a number");
+		if (cents != 0) offset_cents(0); // Shift the inputted note type to compensate for cents (i.e., for C4+125c -> C#4+25c)
 	}
-	else offset_cents(0); // Shift the inputted note type to compensate for cents (i.e., for C4+125c -> C#4+25c)
 }
 
 Note::Note(const int key)
@@ -52,14 +58,14 @@ NoteType Note::get_note_type() const
 
 void Note::decrease_note()
 {
-	if (note_type.getOrdinal() == 0) octave--;
-	note_type.decreaseNote();
+	if (note_type.get_ordinal() == 0) octave--;
+	note_type.decrease_note();
 }
 
 void Note::increase_note()
 {
-	if (note_type.getOrdinal() == NoteType::getMaxOrdinal()) octave++;
-	note_type.increaseNote();
+	if (note_type.get_ordinal() == NoteType::get_max_ordinal()) octave++;
+	note_type.increase_note();
 }
 
 Instrument Note::get_instrument() const
@@ -125,7 +131,7 @@ void Note::offset_cents(const int cents)
 
 int Note::get_id() const
 {
-	return Note("A0").compare(*this);
+	return static_cast<int>(std::round(Note("A0").compare(*this)));
 	// if (id < 0) return 0;
 	// else if (id > 87) return 87;
 	// return id;
@@ -133,7 +139,7 @@ int Note::get_id() const
 
 Note Note::clone() const
 {
-	auto clone = Note(note_type.getName() + std::to_string(octave));
+	auto clone = Note(note_type.get_name() + std::to_string(octave));
 	clone.set_cents(this->cents);
 	clone.set_instrument(this->instrument);
 	return clone;
@@ -141,7 +147,7 @@ Note Note::clone() const
 
 string Note::to_string() const
 {
-	return note_type.getName() + std::to_string(octave) + (this->cents <= 0 ? "" : "+") + (this->cents == 0 ? "" : std::to_string(this->cents) + "c");
+	return note_type.get_name() + std::to_string(octave) + (this->cents <= 0 ? "" : "+") + (this->cents == 0 ? "" : std::to_string(this->cents) + "c");
 }
 
 /*
@@ -173,12 +179,13 @@ bool Note::operator==(const Note note) const
 	return this->equals(note);
 }
 
-int Note::compare(const Note note) const
+double Note::compare(const Note note) const
 {
     if (*this == note) return 0;
-    const int this_semitones = (octave * 12) + note_type.getOrdinal();
-    const int other_semitones = (note.octave * 12) + note.get_note_type().getOrdinal();
-    return other_semitones - this_semitones;
+    const int this_semitones = (octave * 12) + note_type.get_ordinal();
+    const int other_semitones = (note.octave * 12) + note.get_note_type().get_ordinal();
+	const int cents_difference = note.get_cents() - this->get_cents();
+    return other_semitones - this_semitones + (cents_difference / 100.0);
 }
 
 bool Note::equals(const Note note) const

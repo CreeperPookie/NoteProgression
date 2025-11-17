@@ -4,9 +4,9 @@ project(NoteProgression)
 include(CTest)
 
 set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
+set(CMAKE_CXX_FLAGS "-fno-builtin-round -O0 ${CMAKE_CXX_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
 set(CMAKE_CXX_STANDARD_LIBRARIES, "-lSDL2")
-set(CMAKE_EXE_LINKER_FLAGS "-static")
+set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -static")
 
 include_directories(.)
 include_directories(note)
@@ -21,8 +21,7 @@ add_executable(NoteProgression
     note/Note.h
     note/NoteType.cpp
     note/NoteType.h
-    note/NoteTypes.cpp
-    note/Panning.cpp
+        note/Panning.cpp
     note/Panning.h
     util/BinaryFile.cpp
     util/BinaryFile.h
@@ -32,12 +31,15 @@ add_executable(NoteProgression
         util/Utility.h
         Error.h
         Error.cpp
-        Random.cpp
-        Random.h
-        util/RandomPattern.cpp
-        util/RandomPattern.h
-        util/RandomPatternSegment.cpp
-        util/RandomPatternSegment.h)
+        util/Random.cpp
+        util/Random.h
+        note/random/RandomPattern.cpp
+        note/random/RandomPattern.h
+        note/random/RandomPatternSegment.cpp
+        note/random/RandomPatternSegment.h
+        note/random/RandomData.h
+        util/OutputData.h
+)
 add_test(NAME NoteProgressionTester
         COMMAND NoteProgressionTester)
 set(passRegex "^Success" "^All tests passed")

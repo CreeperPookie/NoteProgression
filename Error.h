@@ -44,7 +44,11 @@ public:
 		SAME_NOTES,
 		MISSING_RANDOM,
 		MISSING_RANDOM_PATTERN,
-		INVALID_RANDOM_PATTERN
+		INVALID_RANDOM_PATTERN,
+		MISSING_RANDOM_PERIOD,
+		INVALID_RANDOM_PERIOD,
+		RANDOM_PERIOD_TOO_LOW,
+		RANDOM_PERIOD_TOO_HIGH
 	};
 	Error() = default;
 	constexpr Error(const ErrorType error_type) : error(error_type) {}

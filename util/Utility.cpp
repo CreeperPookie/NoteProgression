@@ -4,8 +4,6 @@
 
 #include "Utility.h"
 
-#include <sstream>
-
 vector<int> Utility::get_factors(const int number)
 {
 	vector<int> factors;
@@ -37,12 +35,27 @@ int Utility::square(const int x)
 	return x * x;
 }
 
-double Utility::square(double x)
+int64_t Utility::square(const int64_t x)
 {
 	return x * x;
 }
 
-void Utility::replaceAll(std::string& string, const std::string& str, const std::string& replacement)
+uint64_t Utility::square(const uint64_t x)
+{
+	return x * x;
+}
+
+double Utility::square(const double x)
+{
+	return x * x;
+}
+
+bool Utility::is_near(const double value, const double comparison, const double total_tolerance)
+{
+	return std::abs(value - comparison) <= std::abs(total_tolerance);
+}
+
+void Utility::replace_all(std::string& string, const std::string& str, const std::string& replacement)
 {
 	if (string.empty()) return;
 	while (string.find(str) != std::string::npos)

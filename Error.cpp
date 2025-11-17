@@ -48,13 +48,17 @@ std::string Error::get_error_message() const
 		case CUSTOM_INSTRUMENT_INDEX_REQUIRED: return "The provided note mode is custom, but no custom instrument index was specified!";
 		case MISSING_PANNING_MODE: return "The provided panning mode argument wasn't specified!";
 		case INVALID_PANNING_MODE: return "The provided panning mode argument is not a valid panning mode!";
-		case MISSING_NBS_EXPORT: return "The provided arguments require NBS export to be enabled!!";
+		case MISSING_NBS_EXPORT: return "The provided arguments require NBS export to be enabled!";
 		case MISSING_FADE_RANGE: return "The provided fade range argument wasn't specified!";
 		case INVALID_NOTES: return "The provided notes are not valid musical notes!";
 		case SAME_NOTES: return "The provided start and end notes are the same!";
 		case MISSING_RANDOM: return "The note mode must be set to random for those arguments!";
 		case MISSING_RANDOM_PATTERN: return "The provided random pattern argument was not specified!";
 		case INVALID_RANDOM_PATTERN: return "The provided random pattern argument is not a valid note pattern!";
+		case MISSING_RANDOM_PERIOD: return "The provided random period argument was not specified!";
+		case INVALID_RANDOM_PERIOD: return "The provided random period argument is not a valid number!";
+		case RANDOM_PERIOD_TOO_LOW: return "The provided random period argument must be at least 1!";
+		case RANDOM_PERIOD_TOO_HIGH: return "The provided random period argument cannot be higher than the total length!";
 		default: return "Unknown error!";
 	}
 }
