@@ -796,9 +796,9 @@ vector<Note> get_note_progression(const Note segment_start, const Note segment_e
 					if ((i > 0 || !include_base_note))
 					{
 						current_precision_loss += cent_step_exact - cent_step;
-						if (output_data.output_enabled && output_data.debug) cout << "new precision loss: " << current_precision_loss << endl;
 						if (current_precision_loss != 0 && abs(current_precision_loss / 0.495) >= 1)
 						{
+							if (output_data.output_enabled && output_data.debug) cout << "new precision loss: " << current_precision_loss << endl;
 							cent_offset = static_cast<int>(round(current_precision_loss + 0.051));
 							if (output_data.output_enabled && output_data.debug) cout << "detected precision loss, adding " << cent_offset << " cents" << endl;
 							current_precision_loss -= cent_offset;

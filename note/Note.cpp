@@ -108,7 +108,7 @@ void Note::offset_cents(const int cents)
 			decrease_note();
 			this->cents += 100;
 		}
-		if (this->cents < -50)
+		if (this->cents <= -50)
 		{
 			decrease_note();
 			this->cents = 100 + this->cents;
@@ -121,7 +121,7 @@ void Note::offset_cents(const int cents)
 			increase_note();
 			this->cents -= 100;
 		}
-		if (this->cents > 50)
+		if (this->cents >= 50)
 		{
 			increase_note();
 			this->cents = -(100 - this->cents);
