@@ -770,7 +770,7 @@ vector<Note> get_note_progression(const Note segment_start, const Note segment_e
 				int cent_step = 0;
 				if (note_mode == GenerationMode::LINEAR || note_mode == GenerationMode::RANDOM_LINEAR)
 				{
-					cent_step_exact = ((semitone_difference / static_cast<double>(total_length)) * 100.0);
+					cent_step_exact = ((semitone_difference / static_cast<double>(total_length - (include_end_note ? 1 : 0))) * 100.0);
 					if (output_data.output_enabled && output_data.debug) cout << "exact cent step: " << cent_step_exact << endl;
 					cent_step = static_cast<int>(cent_step_exact < 0 ? ceil(cent_step_exact) : floor(cent_step_exact));
 				}
